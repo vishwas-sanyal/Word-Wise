@@ -1,11 +1,33 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Text, StyleSheet, Alert, View, TouchableOpacity, TextInput, Animated, Keyboard } from 'react-native';
-
+// import { FileSystem } from "expo-file-system";
+import dictionary from "./../assets/dictionary.json";
 
 export default function App() {
 
+    // useEffect(() => {
+    //     const loadJSON = async () => {
+    //         try {
+    //             const fileUri = FileSystem.documentDirectory + "./../assets/dictionary.json";
+    //             const content = await FileSystem.File.readAsString(fileUri, { encoding: "utf8" });
+    //             const dictionary = JSON.parse(content);
+    //             // console.log("Dictionary loaded:", dictionary);
+    //             return dictionary;
+    //         } catch (error) {
+    //             console.error("Error loading dictionary:", error);
+    //         }
+    //     };
+    //     loadJSON();
+    // }, []);
+
     const [text, setText] = useState("");
     const [result, setResult] = useState("");
+
+    const lookup = (word) => {
+        const idx = word[0].toLowerCase().charCodeAt(0) - "a".charCodeAt(0);
+        if (idx < 0 || idx > 25) return "Not found";
+        return dictionary[idx][word.toLowerCase()] || "Not found";
+    };
 
     const speak = () => {
         Alert.alert("button",
@@ -24,7 +46,7 @@ export default function App() {
     const showResult = () => {
         Keyboard.dismiss();
         Animated.timing(resultY, {
-            toValue: 0,
+            toValue: 70,
             duration: 500,
             useNativeDriver: true,
         }).start();
@@ -32,7 +54,7 @@ export default function App() {
 
     const hideResult = () => {
         Animated.timing(resultY, {
-            toValue: 300, // slide back down
+            toValue: 500, // slide back down
             duration: 400,
             useNativeDriver: true,
         }).start(() => {
@@ -43,7 +65,8 @@ export default function App() {
 
     const handleSend = () => {
         if (!text.trim()) return;
-        setResult(`Result for: ${text}`);
+        const meaning = dictionary[text.toLowerCase()];
+        setResult(meaning ? meaning : "Word not found.");
         showResult();
     };
 
