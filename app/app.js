@@ -1,33 +1,58 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Text, StyleSheet, Alert, View, TouchableOpacity, TextInput, Animated, Keyboard } from 'react-native';
+import { openDatabase } from 'expo-sqlite';
+// import { File, Directory } from 'expo-file-system';
+import * as FileSystem from "expo-file-system/legacy";
+
+import { Asset } from 'expo-asset';
 // import { FileSystem } from "expo-file-system";
-import dictionary from "./../assets/dictionary.json";
+// import dictionary from "./../assets/dictionary.db";
 
 export default function App() {
 
-    // useEffect(() => {
-    //     const loadJSON = async () => {
-    //         try {
-    //             const fileUri = FileSystem.documentDirectory + "./../assets/dictionary.json";
-    //             const content = await FileSystem.File.readAsString(fileUri, { encoding: "utf8" });
-    //             const dictionary = JSON.parse(content);
-    //             // console.log("Dictionary loaded:", dictionary);
-    //             return dictionary;
-    //         } catch (error) {
-    //             console.error("Error loading dictionary:", error);
-    //         }
-    //     };
-    //     loadJSON();
-    // }, []);
-
     const [text, setText] = useState("");
+    const [db, setDb] = useState(null);
     const [result, setResult] = useState("");
 
+    useEffect(() => {
+        const loadDb = async () => {
+            const asset = Asset.fromModule(require('./../assets/dictionary.db'));
+            await asset.downloadAsync();
+
+            const dbUri = `${FileSystem.documentDirectory}dictionary.db`;
+            await FileSystem.copyAsync({
+                from: asset.localUri,  // 👈 use the downloaded asset’s localUri
+                to: dbUri,
+            });
+
+            const database = openDatabase('dictionary.db');
+            setDb(database);
+        };
+
+        loadDb();
+    }, []);
+
     const lookup = (word) => {
-        const idx = word[0].toLowerCase().charCodeAt(0) - "a".charCodeAt(0);
-        if (idx < 0 || idx > 25) return "Not found";
-        return dictionary[idx][word.toLowerCase()] || "Not found";
+        if (!db) return;
+
+        db.transaction(tx => {
+            tx.executeSql(
+                'SELECT meaning FROM words WHERE word = ?;',
+                [word.toLowerCase()],
+                (_, { rows }) => {
+                    if (rows.length > 0) {
+                        setResult(rows.item(0).meaning);
+                    } else {
+                        setResult("Not found");
+                    }
+                },
+                (t, error) => {
+                    console.error("DB Error: ", error);
+                }
+            );
+        });
     };
+
 
     const speak = () => {
         Alert.alert("button",
@@ -65,9 +90,9 @@ export default function App() {
 
     const handleSend = () => {
         if (!text.trim()) return;
-        const meaning = dictionary[text.toLowerCase()];
-        setResult(meaning ? meaning : "Word not found.");
-        showResult();
+
+        lookup(text);   // query the SQLite DB
+        showResult();   // animate the result box
     };
 
     return (
