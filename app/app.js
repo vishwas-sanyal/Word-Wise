@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Text, StyleSheet, Alert, View, TouchableOpacity, TextInput, Animated, Keyboard } from 'react-native';
-import { openDatabase } from 'expo-sqlite';
-// import { File, Directory } from 'expo-file-system';
+import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
-
 import { Asset } from 'expo-asset';
-// import { FileSystem } from "expo-file-system";
-// import dictionary from "./../assets/dictionary.db";
+
+import Constants from 'expo-constants';
+console.log("App ownership:", Constants.appOwnership);
 
 export default function App() {
 
@@ -25,7 +24,7 @@ export default function App() {
                 to: dbUri,
             });
 
-            const database = openDatabase('dictionary.db');
+            const database = await SQLite.openDatabaseAsync('dictionary.db');
             setDb(database);
         };
 
@@ -37,11 +36,11 @@ export default function App() {
 
         db.transaction(tx => {
             tx.executeSql(
-                'SELECT meaning FROM words WHERE word = ?;',
-                [word.toLowerCase()],
+                'SELECT definition FROM entries WHERE word = ?;',
+                [word.toUpperCase()], // your DB seems to store words in uppercase
                 (_, { rows }) => {
                     if (rows.length > 0) {
-                        setResult(rows.item(0).meaning);
+                        setResult(rows.item(0).definition);
                     } else {
                         setResult("Not found");
                     }
